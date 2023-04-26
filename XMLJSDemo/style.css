@@ -1,0 +1,101 @@
+/* Color Palettes: 
+* Autumn:   https://coolors.co/palette/6f1d1b-bb9457-432818-99582a-ffe6a7
+* Vintage:  https://coolors.co/palette/6f4e37-a67b5b-fed8b1-d99a6c-ecb176
+*/
+
+body {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 25% 1fr;
+    gap: 1rem;
+
+    background-color: #FED8B1;
+}
+
+a {
+    color: maroon;
+}
+
+h1, h4 {
+    color: #432818;
+    text-align: center;
+}
+
+.boxHeader {
+    margin: auto;
+    margin-top: 1rem;
+    padding: 0.5rem;
+
+    width: 50%;
+    height: fit-content;
+
+    font-size: 2em;
+    background-image: radial-gradient(circle, #ECCD98, #A67B5B);
+}
+
+.refBoxes {
+    text-align: center;
+    height: 50vh;
+    overflow: scroll;
+
+    padding: 0.5rem;
+    font-size: 1.2em;
+    color: #ffe7bd;
+
+    background-color: #A67B5B;
+    border: 2px solid maroon;
+    border-radius: 5px;
+}
+
+#lexBox {
+    grid-column: 4 / span 1;
+}
+
+#referenceBox {
+    grid-column: 4 / span 1;
+    grid-row: 2 / span 1;
+}
+
+/* Form */
+form {
+    grid-column: 1 / span 3;
+    grid-row: 1 / span 1;
+
+    height: fit-content;
+    text-align: center;
+
+    padding: 1rem;
+    margin: 0 auto;
+}
+
+/* Form Children */
+select {
+    margin: 0 auto;
+}
+
+#strongsCheckbox {
+    margin: 0 auto;
+}
+
+td {
+    padding: 0.5rem;
+}
+
+/*******************/
+
+#responseArea {
+    grid-column: 1 / span 3;
+    visibility: hidden;
+
+    height: 50vh;
+    overflow: scroll; 
+
+    font-size: 1.1em;
+
+    margin: 0 auto;
+    padding: 0.5rem;
+
+    background-color: #FFE9C2;
+    border: 2px solid #A67B5B;
+    border-radius: 5px;
+}
