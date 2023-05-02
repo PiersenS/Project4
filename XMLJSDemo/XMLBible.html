@@ -11,6 +11,15 @@
 <title>XML Bible</title>
 <link rel="stylesheet" href="style.css">
 <script type="text/javascript">
+
+const BookNames = ["", "Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth","1 Samuel","2 Samuel","1 Kings","2 Kings",
+        "1 Chronicles","2 Chronicles","Ezra","Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations",
+        "Ezekiel","Daniel","Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi", 
+        "Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians",
+        "2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"];
+
+var CurrentChapter = "";
+
 function setup() {
   if (window.XMLHttpRequest)
     {// code for IE7+, Firefox, Chrome, Opera, Safari
@@ -27,7 +36,7 @@ function setup() {
 
 function getresponse () {
   // read input values from user
-  var b = document.getElementById('book').value;
+  var b = document.getElementById('bookSelect').value;
   var c = document.getElementById('chapter').value;
   var v = document.getElementById('verse').value;
   var numVerse = parseInt(document.getElementById('num_verse').value);
@@ -40,10 +49,6 @@ function getresponse () {
               "</i></b>";
     return;
  }
-
-  if (b < 1 || b > 66) {
-    // book doesn't exist
-  }
 
   // Strategy for implementing multiple verses:
   /*
@@ -63,20 +68,15 @@ function getresponse () {
   xmlhttp.send();
   xmlDoc = xmlhttp.responseXML;
 
-  /*
-  var bookInfo = "<h6>Book retrieved from file: " + XMLBook + "</h6>";
-  document.all.headArea.innerHTML = "<h1><font color=blue>XML Bible Demo Output</font></h1>"
-									+ bookInfo;
-  */
   document.all.responseArea.innerHTML = " ";
   if (numVerse == null || numVerse < 1) {
     numVerse = 1;
   }
 
-  var vtext;
+  var vtext = "";
   var verseFound = false;
   try {
-    vtext = "<p>" + getVerse(b,c,v) + "</p>";
+    vtext = "<p>" + getVerse(b,c,v,false) + "</p>";
     verseFound = true;
   }
   catch(error) {
@@ -98,7 +98,7 @@ function getresponse () {
     while (count < numVerse) {
       verseFound = false;
       try {
-        vtext = "<p>" + getVerse(b,c,v) + "</p>";
+        vtext = "<p>" + getVerse(b,c,v,true) + "</p>";
         verseFound = true;
         document.all.responseArea.innerHTML += vtext;
         
@@ -132,18 +132,29 @@ function getresponse () {
   document.getElementById("responseArea").style.visibility = "visible";
 } // end getResponse
 
-function getVerse(book,chapter,verse) {
-  var verseOutput = xmlDoc.getElementsByTagName("book")[0].getAttribute("name"); 
+function getVerse(book,chapter,verse,chapterIsDisplayed) {
+  var chapToDisplay = xmlDoc.getElementsByTagName("book")[0].getAttribute("name"); 
   var c = xmlDoc.getElementsByTagName("chapter")[chapter-1];
   if (c==null)
 	throw "no chapter";
-  verseOutput += " ";
-  verseOutput += c.getAttribute("number"); 
+
+  let verseOutput = "";
+  chapToDisplay += " " + c.getAttribute("number");
+
+  if (chapToDisplay != CurrentChapter) {
+    chapterIsDisplayed = false;
+    PreviousChapter = CurrentChapter;
+    CurrentChapter = chapToDisplay;
+  }
+  if (!chapterIsDisplayed) {
+    // display chapter
+    verseOutput += "<b>" + CurrentChapter + "</b><br />";
+  }
+
   var v = c.getElementsByTagName("verse")[verse-1]
   if (v==null)
 	throw "no verse";
-  verseOutput += ":";
-  verseOutput += v.getAttribute("number");
+  verseOutput += "<sup>" + v.getAttribute("number") + "</sup>";
 
   verseOutput += " ";
   for (j=0; j < v.childNodes.length; j++) {
@@ -180,6 +191,10 @@ function getNodeString(node) {
 		    if (node.childNodes[0] != null) {
 		      // show the text of the word that is inside the strong tag
 			    result += node.childNodes[0].nodeValue;
+          if (document.getElementById("versionSelect").value == "kjv") {
+            result += " ";
+          }
+        }
 		   
 		   // TO DO: use hasAttribute(attributename) to determine
 		   // if the strongs tag has attributes named hebrew, greek, or number
@@ -190,27 +205,26 @@ function getNodeString(node) {
         if (document.getElementById("strongsCheckbox").checked) {
           let lexID;
           let languageChar;
+          let langAttribute;
           if (node.hasAttribute("hebrew")) {
 		      	lexID = node.getAttribute("hebrew");
             languageChar = 'H';
-            
-            result += "<a href='javascript:displayLex(" + lexID + ",\"" + languageChar + "\")'>";
-            
-			      result += "<i><font size=1><sub>";
-			      result += node.getAttribute("hebrew");
-			      result += "</sub></font></i></a> ";
 		      }
           else if (node.hasAttribute("greek")) {
             lexID = node.getAttribute("greek");
             languageChar = 'G';
-
-            result += "<a href='javascript:displayLex(" + lexID + ",\"" + languageChar + "\")'>";
-            result += "<i><font size=1><sub>";
-			      result += node.getAttribute("greek");
-			      result += "</sub></font></i></a> ";
           }
 
-        }
+          let firstChar = lexID.substring(0, 1);
+          let originalID = lexID;
+          if (firstChar == '*') {
+            lexID = lexID.substring(1);
+          }
+
+          result += "<a href='javascript:displayLex(" + lexID + ",\"" + languageChar + "\")'>"; 
+			    result += "<i><font size=1><sub>";
+			    result += originalID;
+			    result += "</sub></font></i></a> ";
       }
 
 	  }
@@ -263,7 +277,7 @@ function displayLex(id, languageChar) {
   let item = xmlDoc.querySelector("item[id='" + idCode + "']");
   
   let lexArticle = document.getElementById("lexDisplay");
-  let title, translit, pronunciation, description;
+  let title, translit, pronunciation, description = "";
 
   title = item.querySelector("title").textContent;
   translit = item.querySelector("transliteration").textContent;
@@ -281,6 +295,7 @@ function displayLex(id, languageChar) {
                       "<p>" + pronunciation + "</p>" +
                       "<p>" + description + "</p>";
   lexArticle.innerHTML = displayString;
+  displayReferences(idCode); // use item code to find references to other locations in Bible
 }
 
 function displayLexFromTarget(idCode) {
@@ -291,6 +306,80 @@ function displayLexFromTarget(idCode) {
   // convert id to number
   let idNum = parseInt(id);
   displayLex(idNum, languageChar);
+}
+
+function displayReferences(itemCode) {
+  /* STRATEGY:
+  * Disect itemCode into languageChar and numerical value.
+  * Use languageChar to determine if (DICT == GRK) or (DICT == HEB)
+  * Use numerical code to find proper item
+  * Once proper item is found, store children in array
+  */
+ /* Formatting:
+ * Make array of book names, like in project 1
+ * use ref value to find book
+ * Goal for display: Genesis 1:1
+ */
+  let path = biblePath + "/bible_refs_of_strongs_numbers/";
+
+  let languageChar = itemCode.substring(0, 1);
+  let itemNumber = itemCode.substring(1);
+  let dict, filename;
+
+  if (languageChar == 'H') {
+    dict = "HEB";
+    filename = "bible_refs_by_strongs_num_ot.xml" // Old Testament concordance file
+  }
+  else if (languageChar == 'G') {
+    dict = "GRK";
+    filename = "bible_refs_by_strongs_num_nt.xml" // New Testament concordance file
+  }
+  else { // do nothing. Invalid itemCode
+    return;
+  }
+
+  path += filename;
+
+  // open concordance file
+  xmlhttp.open("GET",path,false);
+  xmlhttp.send();
+  let xmlDoc = xmlhttp.responseXML;
+  if (xmlhttp.status != 200) { // file did not open
+    return;
+  }
+  
+  let item = xmlDoc.querySelector("item[number='" + itemNumber + "']");
+  let refs = item.getElementsByTagName("ref");
+
+  let refArticle = document.getElementById("referenceDisplay");
+  refArticle.innerHTML = "";
+  let displayString = "";
+  for (let i = 0; i < refs.length; i++) {
+    let currentRef = refs[i];
+
+    let bookNum = currentRef.getAttribute("b");
+    let chapNum = currentRef.getAttribute("ch");
+    let verseNum = currentRef.getAttribute("v");
+
+    displayString += "<p><a href='javascript:displayVerseFromRef(" + bookNum + "," + chapNum + "," + verseNum +")'>" + 
+                      BookNames[bookNum] + " " + chapNum + ":" + verseNum + 
+                      "</a></p>";
+  }
+  refArticle.innerHTML = displayString;
+}
+
+function displayVerseFromRef(b, c, v) {
+  let version = document.getElementById("versionSelect").value;
+  var XMLBook = biblePath + version + "_by_book/" + b + ".xml";
+
+  xmlhttp.open("GET",XMLBook,false);
+  xmlhttp.send();
+  xmlDoc = xmlhttp.responseXML;
+
+  document.all.responseArea.innerHTML = "";
+
+  let vtext = "<p>" + getVerse(b,c,v) + "</p>";
+  document.all.responseArea.innerHTML = vtext;
 }
 
 </script>
@@ -305,8 +394,7 @@ function displayLexFromTarget(idCode) {
   
   <div id="referenceBox" class="refBoxes">
     <h4 class="boxHeader">References</h4>
-    <article id="referenceDisplay" >
-    </article>
+    <article id="referenceDisplay"></article>
   </div>
 
 <form onsubmit="return false"> <!-- submit button defines handler below: onclick="javascript: getresponse()" -->
@@ -320,8 +408,75 @@ function displayLexFromTarget(idCode) {
   <label for="strongsCheckbox">Show Strong's Lexicon</label>
 <table>
 <TR>
-<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
-<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="book" TYPE="text" MAXLENGTH=2  id=book></TD>
+<TD ALIGN=RIGHT VALIGN=TOP>Book</TD>
+<TD ALIGN=LEFT VALIGN=TOP><select name="book" id="bookSelect">
+  <option value="1">Genesis
+  <option value="2">Exodus
+  <option value="3">Leviticus
+  <option value="4">Numbers
+  <option value="5">Deuteronomy
+  <option value="6">Joshua
+  <option value="7">Judges
+  <option value="8">Ruth
+  <option value="9">1st Samuel
+  <option value="10">2nd Samuel
+  <option value="11">1st Kings
+  <option value="12">2nd Kings
+  <option value="13">1st Chronicles
+  <option value="14">2nd Chronicles
+  <option value="15">Ezra
+  <option value="16">Nehemiah
+  <option value="17">Esther
+  <option value="18">Job
+  <option value="19">Psalms
+  <option value="20">Proverbs
+  <option value="21">Ecclesiastes
+  <option value="22">Song of Solomon
+  <option value="23">Isaiah
+  <option value="24">Jeremiah
+  <option value="25">Lamentations
+  <option value="26">Ezekiel
+  <option value="27">Daniel
+  <option value="28">Hosea
+  <option value="29">Joel
+  <option value="30">Amos
+  <option value="31">Obadiah
+  <option value="32">Jonah
+  <option value="33">Micah
+  <option value="34">Nahum
+  <option value="35">Habakkuk
+  <option value="36">Zephaniah
+  <option value="37">Haggai
+  <option value="38">Zechariah
+  <option value="39">Malachi
+  <option value="40">Matthew
+  <option value="41">Mark
+  <option value="42">Luke
+  <option value="43">John
+  <option value="44">Acts
+  <option value="45">Romans
+  <option value="46">1st Corinthians
+  <option value="47">2nd Corinthians
+  <option value="48">Galatians
+  <option value="49">Ephesians
+  <option value="50">Philippians
+  <option value="51">Colossians
+  <option value="52">1st Thessalonians
+  <option value="53">2nd Thessalonians
+  <option value="54">1st Timothy
+  <option value="55">2nd Timothy
+  <option value="56">Titus
+  <option value="57">Philemon
+  <option value="58">Hebrews
+  <option value="59">James
+  <option value="60">1st Peter
+  <option value="61">2nd Peter
+  <option value="62">1st John
+  <option value="63">2nd John
+  <option value="64">3rd John
+  <option value="65">Jude
+  <option value="66">Revelation
+  </select></TD>
 </TR>
 <TR>
 <TD ALIGN=RIGHT VALIGN=TOP>Chapter</TD>
